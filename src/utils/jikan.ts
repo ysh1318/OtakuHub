@@ -10,17 +10,20 @@ function getApiBaseCandidates(): string[] {
 
   const candidates: string[] = [];
 
-  // 1. Same-origin Cloudflare Pages API proxy (Primary when deployed or in dev via Vite proxy)
+  // 1. Tenrai API (Active high-performance Jikan v4 drop-in mirror, CORS enabled globally)
+  candidates.push("https://api.tenrai.org/v4");
+
+  // 2. Same-origin Cloudflare Pages API proxy (Edge cached)
   if (isBrowser && (hostname.includes("pages.dev") || hostname.includes("localhost") || hostname === "127.0.0.1")) {
     candidates.push("/api/jikan");
   } else if (isBrowser && origin.startsWith("http")) {
     candidates.push("/api/jikan");
   }
 
-  // 2. Direct Cloudflare Pages production edge proxy (CORS open, handles regional ISP blocks)
+  // 3. Direct Cloudflare Pages production edge proxy
   candidates.push("https://otakuhub.pages.dev/api/jikan");
 
-  // 3. Upstream Jikan v4 direct API
+  // 4. Legacy Jikan v4 direct API
   candidates.push("https://api.jikan.moe/v4");
 
   return candidates;
