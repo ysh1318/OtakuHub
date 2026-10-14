@@ -1,7 +1,39 @@
 import { Anime } from "../types";
 
-const JIKAN = "https://api.jikan.moe/v4";
 export const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// ─── CANDIDATE API BASE URLS (Multi-proxy with auto-failover) ────────────────
+function getApiBaseCandidates(): string[] {
+  const isBrowser = typeof window !== "undefined";
+  const origin = isBrowser ? window.location.origin : "";
+  const hostname = isBrowser ? window.location.hostname : "";
+
+  const candidates: string[] = [];
+
+  // 1. Same-origin Cloudflare Pages API proxy (Primary when deployed or in dev via Vite proxy)
+  if (isBrowser && (hostname.includes("pages.dev") || hostname.includes("localhost") || hostname === "127.0.0.1")) {
+    candidates.push("/api/jikan");
+  } else if (isBrowser && origin.startsWith("http")) {
+    candidates.push("/api/jikan");
+  }
+
+  // 2. Direct Cloudflare Pages production edge proxy (CORS open, handles regional ISP blocks)
+  candidates.push("https://otakuhub.pages.dev/api/jikan");
+
+  // 3. Upstream Jikan v4 direct API
+  candidates.push("https://api.jikan.moe/v4");
+
+  return candidates;
+}
+
+let activeBaseUrl: string | null = null;
+
+// Fetch with strict timeout using AbortController
+function fetchWithTimeout(url: string, timeoutMs = 6500): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(id));
+}
 
 // ─── SAFE IMAGE EXTRACTION ───────────────────────────────────────────────────
 export function getAnimeImageUrl(anime?: Partial<Anime> | null): string {
@@ -30,11 +62,11 @@ const memoryCache = new Map<string, CacheEntry>();
 const CACHE_PREFIX = "otaku_jikan_v2_";
 const DEFAULT_TTL = 15 * 60 * 1000; // 15 minutes default
 
-function getCache(key: string): any | null {
+function getCache(key: string, allowStale = false): any | null {
   const now = Date.now();
   // 1. Check memory
   const mem = memoryCache.get(key);
-  if (mem && now - mem.timestamp < DEFAULT_TTL) {
+  if (mem && (allowStale || now - mem.timestamp < DEFAULT_TTL)) {
     return mem.data;
   }
 
@@ -43,10 +75,10 @@ function getCache(key: string): any | null {
     const raw = sessionStorage.getItem(CACHE_PREFIX + key);
     if (raw) {
       const parsed: CacheEntry = JSON.parse(raw);
-      if (now - parsed.timestamp < DEFAULT_TTL) {
+      if (allowStale || now - parsed.timestamp < DEFAULT_TTL) {
         memoryCache.set(key, parsed);
         return parsed.data;
-      } else {
+      } else if (!allowStale) {
         sessionStorage.removeItem(CACHE_PREFIX + key);
       }
     }
@@ -108,56 +140,76 @@ async function processQueue() {
   isProcessingQueue = false;
 }
 
-async function executeFetch(path: string, maxRetries = 3): Promise<any> {
-  let attempt = 0;
-  while (attempt <= maxRetries) {
-    try {
-      const res = await fetch(`${JIKAN}${path}`);
+async function executeFetch(path: string, maxRetries = 2): Promise<any> {
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
 
-      // Handle Jikan Rate Limiting (429)
-      if (res.status === 429) {
-        attempt++;
-        const retryAfterHeader = res.headers.get("Retry-After");
-        const pauseTime = retryAfterHeader
-          ? Math.max(parseInt(retryAfterHeader, 10) * 1000, 2000)
-          : 1500 * Math.pow(1.6, attempt) + Math.random() * 400;
+  // Prioritize active successful base URL if discovered
+  const allCandidates = getApiBaseCandidates();
+  const candidates = activeBaseUrl
+    ? [activeBaseUrl, ...allCandidates.filter((c) => c !== activeBaseUrl)]
+    : allCandidates;
 
-        // Pause entire queue so other requests don't keep hammering
-        queuePausedUntil = Math.max(queuePausedUntil, Date.now() + pauseTime);
-        await delay(pauseTime);
+  let lastError: any = null;
 
-        if (attempt > maxRetries) {
-          // If all retries exhausted, check if we have any stale cache
-          const stale = getCache(path);
-          if (stale) return stale;
-          throw new Error("HTTP 429 Rate Limit Exceeded");
-        }
-        continue;
-      }
+  for (const base of candidates) {
+    const fullUrl = `${base}${cleanPath}`;
 
-      if (!res.ok) {
-        if (res.status >= 500 && attempt < maxRetries) {
-          attempt++;
-          await delay(800 * attempt);
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetchWithTimeout(fullUrl, 6500);
+
+        // Handle Jikan Rate Limiting (429)
+        if (res.status === 429) {
+          const retryAfterHeader = res.headers.get("Retry-After");
+          const pauseTime = retryAfterHeader
+            ? Math.max(parseInt(retryAfterHeader, 10) * 1000, 2000)
+            : 1500 * Math.pow(1.5, attempt) + Math.random() * 400;
+
+          queuePausedUntil = Math.max(queuePausedUntil, Date.now() + pauseTime);
+          await delay(pauseTime);
+
+          if (attempt >= maxRetries) {
+            break; // Try next candidate base URL
+          }
           continue;
         }
-        throw new Error(`HTTP ${res.status}`);
-      }
 
-      const json = await res.json();
-      setCache(path, json);
-      return json;
-    } catch (err) {
-      if (attempt >= maxRetries) {
-        // Fallback to stale cached data if network failed
-        const stale = getCache(path);
-        if (stale) return stale;
-        throw err;
+        if (!res.ok) {
+          // If 404 or server error, this proxy candidate might not be available; switch to next candidate
+          if (res.status === 404 || res.status >= 500) {
+            break;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const json = await res.json();
+        // Endpoint succeeded! Set as active
+        activeBaseUrl = base;
+        setCache(path, json);
+        return json;
+      } catch (err: any) {
+        lastError = err;
+        // On connection timeout or network abort, immediately try the next candidate
+        if (
+          err.name === "AbortError" ||
+          err.message?.includes("Failed to fetch") ||
+          err.message?.includes("NetworkError") ||
+          err.message?.includes("timed out")
+        ) {
+          break; // Don't hang around retrying a dead endpoint
+        }
+        if (attempt < maxRetries) {
+          await delay(600 * (attempt + 1));
+        }
       }
-      attempt++;
-      await delay(700 * attempt);
     }
   }
+
+  // If all candidates failed, try returning stale cache
+  const stale = getCache(path, true);
+  if (stale) return stale;
+
+  throw lastError || new Error("Failed to fetch anime data from all candidate endpoints");
 }
 
 export function jikanFetch(path: string, retries = 3): Promise<any> {
