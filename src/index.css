@@ -1,0 +1,403 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-rajdhani: "Rajdhani", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+  background: #07070f;
+  color: #f1f5f9;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #07070f;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e1e2e;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
+button, input, textarea {
+  font-family: inherit;
+}
+
+input {
+  color: #e2e8f0;
+}
+input::placeholder {
+  color: #4a5568;
+}
+
+a {
+  text-decoration: none;
+}
+
+/* Animations map */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes heroKen {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.04) translate(-1%, -1%); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+@keyframes cardReveal {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  50% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.15); }
+}
+@keyframes ecchiGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+  50% { box-shadow: 0 0 0 8px rgba(236, 72, 153, 0.12); }
+}
+@keyframes borderFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes particleFloat {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.2; }
+  100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+}
+@keyframes scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.018); opacity: 1; }
+}
+@keyframes driftX {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+@keyframes driftY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes shelfReveal {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes rosePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 114, 182, 0); }
+  50% { box-shadow: 0 0 18px 4px rgba(244, 114, 182, 0.18); }
+}
+@keyframes sectionFadeUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes iconSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(10deg) scale(1.1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+@keyframes navGlow {
+  0%, 100% { background: rgba(99, 102, 241, 0.04); }
+  50% { background: rgba(99, 102, 241, 0.11); }
+}
+@keyframes platformPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes scrollHint {
+  0%, 100% { opacity: 0.3; transform: translateX(0); }
+  50% { opacity: 0.8; transform: translateX(5px); }
+}
+@keyframes ecchiHeroPulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.01); }
+}
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.3); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.2); }
+  70% { transform: scale(1); }
+}
+@keyframes pinkGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+  50% { box-shadow: 0 0 28px 6px rgba(236, 72, 153, 0.22); }
+}
+@keyframes petalsFloat {
+  0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.3; }
+  100% { transform: translateY(-110vh) rotate(540deg) translateX(40px); opacity: 0; }
+}
+@keyframes shimmerPink {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes ecchiCardReveal {
+  from { opacity: 0; transform: translateY(24px) scale(0.93); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes sizzle {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  50% { filter: hue-rotate(15deg) brightness(1.08); }
+}
+@keyframes neonFlicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.4; }
+  94% { opacity: 1; }
+  96% { opacity: 0.6; }
+  97% { opacity: 1; }
+}
+@keyframes bottomBarIn {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes fsToggle {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+/* Hover effects classes */
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-7px) scale(1.04);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(99, 102, 241, 0.32);
+}
+
+.ecchi-card-hover {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+.ecchi-card-hover:hover {
+  transform: translateY(-7px) scale(1.04);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(236, 72, 153, 0.38);
+}
+
+.ecchi-platform-card {
+  transition: all 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ecchi-platform-card:hover {
+  transform: translateY(-5px) scale(1.018);
+  box-shadow: 0 20px 48px rgba(236, 72, 153, 0.25), 0 0 0 1px rgba(236, 72, 153, 0.4);
+}
+
+.ecchi-nav-item {
+  transition: all 0.22s ease;
+}
+.ecchi-nav-item:hover {
+  background: rgba(236, 72, 153, 0.12) !important;
+  color: #f9a8d4 !important;
+}
+
+.ecchi-btn {
+  transition: all 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+.ecchi-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.12), transparent);
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.ecchi-btn:hover::after {
+  opacity: 1;
+}
+.ecchi-btn:active {
+  transform: scale(0.97);
+}
+
+.petal {
+  animation: petalsFloat linear infinite;
+}
+
+.btn-primary {
+  transition: all 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.btn-primary:hover::after {
+  opacity: 1;
+}
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.nav-item {
+  transition: all 0.22s ease;
+}
+.nav-item:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: #a5b4fc !important;
+}
+
+.platform-card {
+  transition: all 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.platform-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.tab-btn {
+  transition: all 0.18s ease;
+  position: relative;
+}
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #6366f1;
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+.tab-btn.active::after {
+  transform: scaleX(1);
+}
+
+.fade-in {
+  animation: fadeIn 0.45s ease forwards;
+}
+.slide-up {
+  animation: slideUp 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.hero-img {
+  /* Dynamic Ken Burns scale animation is disabled to prevent sub-pixel rendering blurriness in browsers */
+  animation: none;
+}
+.glow {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+.breathe {
+  animation: breathe 5s ease-in-out infinite;
+}
+.drift-y {
+  animation: driftY 7s ease-in-out infinite;
+}
+.drift-x {
+  animation: driftX 9s ease-in-out infinite;
+}
+.section-reveal {
+  animation: sectionFadeUp 0.55s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+  opacity: 0;
+}
+.shelf-reveal {
+  animation: shelfReveal 0.5s ease forwards;
+}
+.logo-breathe {
+  animation: breathe 6s ease-in-out infinite;
+}
+.scroll-hint {
+  animation: scrollHint 2.5s ease-in-out infinite;
+}
+
+.bottom-nav-item {
+  transition: all 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.bottom-nav-item:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: #a5b4fc !important;
+}
+
+.ecchi-bottom-nav-item {
+  transition: all 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+.ecchi-bottom-nav-item:hover {
+  background: rgba(236, 72, 153, 0.12) !important;
+  color: #f9a8d4 !important;
+}
+
+.fs-btn {
+  transition: all 0.18s ease;
+}
+.fs-btn:active {
+  transform: scale(0.9);
+}
