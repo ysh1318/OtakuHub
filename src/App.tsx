@@ -21,6 +21,7 @@ import { auth, db, googleProvider, handleFirestoreError, OperationType } from ".
 export default function App() {
   const [page, setPage] = useState("home");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
   const [browseMode, setBrowseMode] = useState("explore");
   const [genreFilter, setGenreFilter] = useState<{ id: number; name: string; color: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -223,6 +224,7 @@ export default function App() {
       addToHistory(anime);
       navStack.current.push({ page, browseMode, genreFilter });
       setSelectedId(anime.mal_id);
+      setSelectedAnime(anime);
       if (page === "ecchi" || page === "ecchiDetail") {
         setPage("ecchiDetail");
       } else {
@@ -398,6 +400,7 @@ export default function App() {
             {page === "ecchiDetail" && selectedId && (
               <EcchiDetailPage
                 animeId={selectedId}
+                initialAnime={selectedAnime?.mal_id === selectedId ? selectedAnime : null}
                 onBack={handleBack}
                 watchlist={watchlist}
                 toggleWatchlist={toggleWatchlist}
@@ -408,6 +411,7 @@ export default function App() {
             {page === "detail" && selectedId && (
               <DetailPage
                 animeId={selectedId}
+                initialAnime={selectedAnime?.mal_id === selectedId ? selectedAnime : null}
                 onBack={handleBack}
                 watchlist={watchlist}
                 toggleWatchlist={toggleWatchlist}

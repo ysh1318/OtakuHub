@@ -11,8 +11,15 @@ interface BottomBarProps {
   isFullscreen?: boolean;
 }
 
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  ecchi?: boolean;
+}
+
 export const BottomBar: React.FC<BottomBarProps> = ({ page, onNav, watchlist, isFullscreen = false }) => {
-  const nav = [
+  const nav: NavItem[] = [
     { id: "home",      label: "Home",     icon: "home" },
     { id: "explore",   label: "Explore",  icon: "explore" },
     { id: "airing",    label: "Airing",   icon: "airing" },
@@ -21,7 +28,7 @@ export const BottomBar: React.FC<BottomBarProps> = ({ page, onNav, watchlist, is
     { id: "genres",    label: "Genres",   icon: "genre" },
     { id: "schedule",  label: "Schedule", icon: "schedule" },
     { id: "watchlist", label: "Watchlist",icon: "watchlist" },
-    { id: "ecchi",     label: "Ecchi",    icon: "heart", ecchi: true },
+    // { id: "ecchi",     label: "Ecchi",    icon: "heart", ecchi: true }, // Visually hidden from navbar
     { id: "community", label: "Community",icon: "community" },
   ];
   return (
@@ -135,7 +142,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ page, onNav, watchlist }) => {
-  const items = [
+  const items: NavItem[] = [
     { id: "home",      label: "Home",      icon: "home" },
     { id: "explore",   label: "Explore",   icon: "explore" },
     { id: "airing",    label: "Airing Now",icon: "airing" },
@@ -144,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ page, onNav, watchlist }) => {
     { id: "schedule",  label: "Schedule",  icon: "schedule" },
     { id: "watchlist", label: "Watchlist", icon: "watchlist" },
     { id: "history",   label: "History",   icon: "history" },
-    { id: "ecchi",     label: "Ecchi",     icon: "heart", ecchi: true },
+    // { id: "ecchi",     label: "Ecchi",     icon: "heart", ecchi: true }, // Visually hidden from navbar
     { id: "community", label: "Community", icon: "community" },
   ];
 

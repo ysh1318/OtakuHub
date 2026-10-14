@@ -23,6 +23,7 @@ import {
 
 interface EcchiDetailPageProps {
   animeId: number;
+  initialAnime?: Anime | null;
   onBack: () => void;
   watchlist: Anime[];
   toggleWatchlist: (anime: Anime) => void;
@@ -31,16 +32,17 @@ interface EcchiDetailPageProps {
 
 export const EcchiDetailPage: React.FC<EcchiDetailPageProps> = ({
   animeId,
+  initialAnime = null,
   watchlist,
   toggleWatchlist,
   toast,
 }) => {
-  const [anime, setAnime] = useState<Anime | null>(null);
+  const [anime, setAnime] = useState<Anime | null>(initialAnime || null);
   const [chars, setChars] = useState<Character[]>([]);
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [activeTab, setActiveTab] = useState("Where to Watch");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialAnime || initialAnime.mal_id !== animeId);
   const [charsLoaded, setCharsLoaded] = useState(false);
   const [revsLoaded, setRevsLoaded] = useState(false);
   const [epWatched, setEpWatchedState] = useState(0);
@@ -58,8 +60,13 @@ export const EcchiDetailPage: React.FC<EcchiDetailPageProps> = ({
   const inWL = watchlist.some((w) => w.mal_id === animeId);
 
   useEffect(() => {
-    setLoading(true);
-    setAnime(null);
+    if (!initialAnime || initialAnime.mal_id !== animeId) {
+      setLoading(true);
+      setAnime(null);
+    } else {
+      setAnime(initialAnime);
+      setLoading(false);
+    }
     setChars([]);
     setRecs([]);
     setReviews([]);
@@ -71,13 +78,21 @@ export const EcchiDetailPage: React.FC<EcchiDetailPageProps> = ({
     let mounted = true;
     (async () => {
       try {
-        const [main, recData] = await Promise.all([
-          jikanFetch(`/anime/${animeId}/full`),
-          jikanFetch(`/anime/${animeId}/recommendations`),
-        ]);
+        const mainPromise = jikanFetch(`/anime/${animeId}/full`, 2, true);
+        const recsPromise = jikanFetch(`/anime/${animeId}/recommendations`, 2, false);
+
+        const main = await mainPromise;
         if (!mounted) return;
-        setAnime(main?.data);
-        setRecs((recData?.data || []).slice(0, 10));
+        if (main?.data) {
+          setAnime(main.data);
+          setLoading(false); // Unblock view immediately
+        }
+
+        recsPromise.then((recData) => {
+          if (mounted && recData?.data) {
+            setRecs(recData.data.slice(0, 10));
+          }
+        }).catch(() => {});
       } catch (e) {
         console.error(e);
       } finally {

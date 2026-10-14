@@ -22,6 +22,7 @@ import {
 
 interface DetailPageProps {
   animeId: number;
+  initialAnime?: Anime | null;
   onBack: () => void;
   watchlist: Anime[];
   toggleWatchlist: (anime: Anime) => void;
@@ -30,16 +31,17 @@ interface DetailPageProps {
 
 export const DetailPage: React.FC<DetailPageProps> = ({
   animeId,
+  initialAnime = null,
   watchlist,
   toggleWatchlist,
   toast,
 }) => {
-  const [anime, setAnime] = useState<Anime | null>(null);
+  const [anime, setAnime] = useState<Anime | null>(initialAnime || null);
   const [chars, setChars] = useState<Character[]>([]);
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [activeTab, setActiveTab] = useState("Where to Watch");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialAnime || initialAnime.mal_id !== animeId);
   const [charsLoaded, setCharsLoaded] = useState(false);
   const [revsLoaded, setRevsLoaded] = useState(false);
   const [epWatched, setEpWatchedState] = useState(0);
@@ -60,8 +62,13 @@ export const DetailPage: React.FC<DetailPageProps> = ({
   const inWL = watchlist.some((w) => w.mal_id === animeId);
 
   useEffect(() => {
-    setLoading(true);
-    setAnime(null);
+    if (!initialAnime || initialAnime.mal_id !== animeId) {
+      setLoading(true);
+      setAnime(null);
+    } else {
+      setAnime(initialAnime);
+      setLoading(false);
+    }
     setChars([]);
     setRecs([]);
     setReviews([]);
@@ -76,36 +83,54 @@ export const DetailPage: React.FC<DetailPageProps> = ({
     let mounted = true;
     (async () => {
       try {
-        const [main, recData] = await Promise.all([
-          jikanFetch(`/anime/${animeId}/full`),
-          jikanFetch(`/anime/${animeId}/recommendations`),
-        ]);
+        // High-priority fetch for full anime payload
+        const mainPromise = jikanFetch(`/anime/${animeId}/full`, 2, true);
+        const recsPromise = jikanFetch(`/anime/${animeId}/recommendations`, 2, false);
+
+        const main = await mainPromise;
         if (!mounted) return;
         const mainAnime = main?.data;
-        setAnime(mainAnime);
-        setRecs((recData?.data || []).slice(0, 10));
+        if (mainAnime) {
+          setAnime(mainAnime);
+          setLoading(false); // Unblock view immediately
+        }
 
+        // Hydrate recommendations non-blockingly
+        recsPromise.then((recData) => {
+          if (mounted && recData?.data) {
+            setRecs(recData.data.slice(0, 10));
+          }
+        }).catch(() => {});
+
+        // Fetch related carousels in background
         if (mainAnime) {
           const studioId = mainAnime.studios?.[0]?.mal_id;
           const genreId = mainAnime.genres?.[0]?.mal_id;
           const season = mainAnime.season;
           const year = mainAnime.year;
 
-          const promises: Promise<any>[] = [];
-          if (studioId) promises.push(jikanFetch(`/anime?studios=${studioId}&order_by=score&sort=desc&limit=8`).catch(() => null));
-          else promises.push(Promise.resolve(null));
+          if (studioId) {
+            jikanFetch(`/anime?studios=${studioId}&order_by=score&sort=desc&limit=8`).then((res) => {
+              if (mounted && res?.data) {
+                setStudioAnime(res.data.filter((a: Anime) => a.mal_id !== animeId).slice(0, 6));
+              }
+            }).catch(() => {});
+          }
 
-          if (season && year) promises.push(jikanFetch(`/season/${year}/${season}?limit=8`).catch(() => null));
-          else promises.push(Promise.resolve(null));
+          if (season && year) {
+            jikanFetch(`/season/${year}/${season}?limit=8`).then((res) => {
+              if (mounted && res?.data) {
+                setSeasonAnime(res.data.filter((a: Anime) => a.mal_id !== animeId).slice(0, 6));
+              }
+            }).catch(() => {});
+          }
 
-          if (genreId) promises.push(jikanFetch(`/anime?genres=${genreId}&order_by=score&sort=desc&limit=8`).catch(() => null));
-          else promises.push(Promise.resolve(null));
-
-          const [studioRes, seasonRes, genreRes] = await Promise.all(promises);
-          if (mounted) {
-            setStudioAnime((studioRes?.data || []).filter((a: Anime) => a.mal_id !== animeId).slice(0, 6));
-            setSeasonAnime((seasonRes?.data || []).filter((a: Anime) => a.mal_id !== animeId).slice(0, 6));
-            setGenreAnime((genreRes?.data || []).filter((a: Anime) => a.mal_id !== animeId).slice(0, 6));
+          if (genreId) {
+            jikanFetch(`/anime?genres=${genreId}&order_by=score&sort=desc&limit=8`).then((res) => {
+              if (mounted && res?.data) {
+                setGenreAnime(res.data.filter((a: Anime) => a.mal_id !== animeId).slice(0, 6));
+              }
+            }).catch(() => {});
           }
         }
       } catch (e) {

@@ -101,26 +101,24 @@ function setCache(key: string, data: any) {
   }
 }
 
-// ─── SERIALIZED REQUEST QUEUE WITH DEDUPLICATION & RATE LIMITING ────────────
+// ─── HIGH-PERFORMANCE REQUEST QUEUE WITH CONCURRENCY & DEDUPLICATION ────────
 interface QueueTask {
   path: string;
   retries: number;
+  priority: boolean;
   resolve: (value: any) => void;
   reject: (reason?: any) => void;
 }
 
 const requestQueue: QueueTask[] = [];
 const inFlightRequests = new Map<string, Promise<any>>();
-let isProcessingQueue = false;
+let activeWorkers = 0;
+const MAX_CONCURRENT_WORKERS = 4;
 let queuePausedUntil = 0;
-const MIN_REQUEST_INTERVAL = 380; // ~2.6 req/s to stay well below Jikan's 3 req/s limit
+const MIN_REQUEST_INTERVAL = 80; // Fast 80ms interval
 
 async function processQueue() {
-  if (isProcessingQueue) return;
-  isProcessingQueue = true;
-
-  while (requestQueue.length > 0) {
-    // Check if queue is paused due to 429
+  while (requestQueue.length > 0 && activeWorkers < MAX_CONCURRENT_WORKERS) {
     const now = Date.now();
     if (queuePausedUntil > now) {
       await delay(queuePausedUntil - now);
@@ -129,18 +127,21 @@ async function processQueue() {
     const task = requestQueue.shift();
     if (!task) break;
 
-    try {
-      const result = await executeFetch(task.path, task.retries);
-      task.resolve(result);
-    } catch (err) {
-      task.reject(err);
-    }
+    activeWorkers++;
+    (async () => {
+      try {
+        const result = await executeFetch(task.path, task.retries);
+        task.resolve(result);
+      } catch (err) {
+        task.reject(err);
+      } finally {
+        activeWorkers--;
+        processQueue();
+      }
+    })();
 
-    // Throttle between requests
     await delay(MIN_REQUEST_INTERVAL);
   }
-
-  isProcessingQueue = false;
 }
 
 async function executeFetch(path: string, maxRetries = 2): Promise<any> {
@@ -215,7 +216,7 @@ async function executeFetch(path: string, maxRetries = 2): Promise<any> {
   throw lastError || new Error("Failed to fetch anime data from all candidate endpoints");
 }
 
-export function jikanFetch(path: string, retries = 3): Promise<any> {
+export function jikanFetch(path: string, retries = 2, priority = false): Promise<any> {
   // 1. Instant Cache Hit
   const cached = getCache(path);
   if (cached) {
@@ -227,9 +228,14 @@ export function jikanFetch(path: string, retries = 3): Promise<any> {
     return inFlightRequests.get(path)!;
   }
 
-  // 3. Enqueue request
+  // 3. Enqueue request (high-priority detail requests jump to front!)
   const requestPromise = new Promise((resolve, reject) => {
-    requestQueue.push({ path, retries, resolve, reject });
+    const task: QueueTask = { path, retries, priority, resolve, reject };
+    if (priority) {
+      requestQueue.unshift(task);
+    } else {
+      requestQueue.push(task);
+    }
     processQueue();
   }).finally(() => {
     inFlightRequests.delete(path);

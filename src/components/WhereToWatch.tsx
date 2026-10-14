@@ -326,8 +326,13 @@ async function fetchMalSync(malId: number): Promise<any> {
   }
 
   const promise = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
     try {
-      const response = await fetch(`https://api.malsync.moe/mal/anime/${malId}`);
+      const response = await fetch(`https://api.malsync.moe/mal/anime/${malId}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
       if (!response.ok) {
         throw new Error(`MAL-Sync HTTP error: ${response.status}`);
       }
@@ -335,6 +340,7 @@ async function fetchMalSync(malId: number): Promise<any> {
       malSyncCache.set(malId, data);
       return data;
     } catch (err) {
+      clearTimeout(timer);
       malSyncErrors.add(malId);
       throw err;
     } finally {
@@ -414,26 +420,7 @@ export function usePlatformUrl(
     }
 
     if (directUrl) {
-      // Check dead check cache
-      const isDeadState = deadCheckCache.get(directUrl);
-      if (isDeadState === "checking") {
-        return { status: "loading", badge: "Resolving", badgeColor: "#6366f1" };
-      }
-      if (isDeadState === "dead" || isDeadCache.has(directUrl)) {
-        // Silently demote to EverythingMoe
-        return { url: emSearchUrl, status: "index", badge: "Index", badgeColor: "#f59e0b" };
-      }
-      if (isDeadState === "alive") {
-        return { url: directUrl, status: "direct", badge: "Direct", badgeColor: "#10b981" };
-      }
-
-      // Not checking yet -> trigger isUrlDead check
-      deadCheckCache.set(directUrl, "checking");
-      isUrlDead(directUrl).then((isDead) => {
-        deadCheckCache.set(directUrl, isDead ? "dead" : "alive");
-        notifyListeners();
-      });
-      return { status: "loading", badge: "Resolving", badgeColor: "#6366f1" };
+      return { url: directUrl, status: "direct", badge: "Direct", badgeColor: "#10b981" };
     }
   }
 
